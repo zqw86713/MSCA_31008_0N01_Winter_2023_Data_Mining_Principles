@@ -294,16 +294,34 @@ lca_results = data.frame(matrix(nrow = 0, ncol = length(lca_columns)))
 colnames(lca_results) = lca_columns
 lca_results$model<-as.integer(lca_results$model)
 
+
+# split the data to train and test.
+for(i in 1:1000){
+  sample <- sample(c(TRUE,FALSE), 
+                   nrow(GermanCredit_Final), 
+                   replace=TRUE, 
+                   prob=c(0.7,0.3))
+  train <- GermanCredit_Final[sample, ]
+  test <- GermanCredit_Final[!sample, ]
+}
+
+
 # run a sequence of models with two to ten groups
 # with nrep=10 it runs every model 10 times and keeps the model with the lowest BIC
 # we used the maxiter argument, which indicates the number of random starting points to be used in the estimation.
 # by setting it to 100, the function will run 100 times with different starting points, and it will choose the best 
 # solution based on the log-likelihood.
-
+# set.seed(1)
 lca_row_number <- 1
-for(i in 2:10){
-  lca_result <- poLCA(formula = f, data = GermanCredit_Final, nclass=i, maxiter=100, na.rm=FALSE,  
-              nrep=10, verbose=TRUE, calc.se=TRUE, graphs = FALSE)
+for(i in 2:6){
+  lca_result <- poLCA(formula = f, 
+                      data = train, 
+                      nclass=i, maxiter=100, 
+                      na.rm=FALSE,  
+              nrep=10, 
+              verbose=TRUE, 
+              calc.se=TRUE,
+              graphs = FALSE)
   
   #-ve df are not acceptable model so we exit the loop
   if(lca_result$resid.df < 0){
@@ -325,11 +343,40 @@ for(i in 2:10){
 }
 
 
-temp_lca_result <- poLCA(formula = f, data = GermanCredit_Final, nclass=2, maxiter=100, na.rm=FALSE,  
-                    nrep=10, verbose=TRUE, calc.se=TRUE, graphs = FALSE)
+# temp_lca_result <- poLCA(formula = f, data = GermanCredit_Final, nclass=2, maxiter=100, na.rm=FALSE,  
+#                     nrep=10, verbose=TRUE, calc.se=TRUE, graphs = FALSE)
+
+model <- as.factor(lca_results$model)
+lca_results$model <- as.numeric(model)
+
+# We believe the K=2 is the elbow.
+# 
+plot(x=lca_results$model,
+     y=lca_results$aic, 
+     type = "b", 
+     xlab="Principal Component", 
+     ylab = "AIC")
+
+plot(x=lca_results$model, 
+     y=lca_results$abic, 
+     type = "b", 
+     xlab="Principal Component", 
+     ylab = "ABIC"
+     )
+
+# The cluster is 2.
 
 
 #*******************************Step 3: Perform Test validation of LCA *******************************#
 
+lca_result_k2 <- poLCA(formula = f, 
+                    data = GermanCredit_Final, 
+                    nclass=2, maxiter=100, 
+                    na.rm=FALSE,  
+                    nrep=10, 
+                    verbose=TRUE, 
+                    calc.se=TRUE,
+                    graphs = FALSE)
 
-
+# conditional probability
+condition_prob <- lca_result_k2$probs
