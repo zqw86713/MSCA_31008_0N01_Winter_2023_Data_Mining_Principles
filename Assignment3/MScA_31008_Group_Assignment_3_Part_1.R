@@ -295,3 +295,6 @@ lca_result_test <- poLCA(
 # and the test model. How similar are they? Would you consider the
 #  model stable?
 lca_result_test
+
+plot(lca_result_test)
+
