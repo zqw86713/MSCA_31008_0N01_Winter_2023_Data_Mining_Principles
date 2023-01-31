@@ -261,7 +261,7 @@ lca_results %>%
 
 # Rerun your LCA model with the training set and your chosen K. 
 # Save the conditional probability
-lca_result_k2 <- poLCA(formula = f, 
+lca_result_train <- poLCA(formula = f, 
                     data = train_set, 
                     nclass=2, maxiter=100, 
                     na.rm=FALSE,  
@@ -270,7 +270,7 @@ lca_result_k2 <- poLCA(formula = f,
                     calc.se=TRUE,
                     graphs = FALSE)
 
-cond_prob <- lca_result_k2$probs
+cond_prob <- lca_result_train$probs
 
 # Build a new LCA model with the test set, your chosen K, 
 # and the probability you just saved as the initial probability. 
@@ -284,7 +284,7 @@ lca_result_test <- poLCA(
   graphs = FALSE, 
   tol = 1e-10, 
   na.rm = FALSE,
-  probs.start = lca_result_k2$probs, 
+  probs.start = lca_result_train$probs, 
   nrep = 10, 
   verbose = TRUE, 
   calc.se = TRUE
@@ -294,7 +294,23 @@ lca_result_test <- poLCA(
 # Print class sizes and conditional probabilities of the train model 
 # and the test model. How similar are they? Would you consider the
 #  model stable?
-lca_result_test
 
+# test model class size
+lca_result_test$P
+
+# test model conditional probability
+lca_result_test$probs
+
+# train model class size
+lca_result_train$P
+
+# train model conditional probability
+lca_result_train$probs
+
+
+# plot the two models
+plot(lca_result_train)
 plot(lca_result_test)
+
+
 
