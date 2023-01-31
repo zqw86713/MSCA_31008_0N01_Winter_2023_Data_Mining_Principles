@@ -5,15 +5,16 @@
 # last_revision_date: "02/05/2023"
 # ---
 
+
 # install the package
 install.packages("ggplot2")
-install.packages('ggcorrplot')
+install.packages("ggcorrplot")
 install.packages("caret")
 install.packages("poLCA")
 install.packages("dplyr")
-install.packages('Amelia')
+install.packages("Amelia")
 install.packages("stringr")
-install.packages('GGally')
+install.packages("GGally")
 
 # load the package
 library(ggplot2)
@@ -25,35 +26,139 @@ library(ggcorrplot)
 library(stringr)
 library(GGally)
 
-#*******************************Step 1: Import and prepare the data for analysis*******************************#
 
-# load the data
-data(GermanCredit)
+# Step 0.	Use csv data.
+GermanCredit <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data",
+  stringsAsFactors = TRUE
+)
 
-# check the first few rows of the data
-head(GermanCredit)
+colnames(GermanCredit) <- c(
+    "CheckingAccountStatus", 
+    "Duration", 
+    "CreditHistory",
+    "Purpose",
+    "Amount", 
+    "SavingsAccountBonds", 
+    "EmploymentDuration", 
+    "InstallmentRatePercentage",
+    "Personal", 
+    "OtherDebtorsGuarantors", 
+    "ResidenceDuration", 
+    "Property", 
+    "Age", 
+    "OtherInstallmentPlans", 
+    "Housing", 
+    "NumberExistingCredits", 
+    "Job",
+    "NumberPeopleMaintenance",
+    "Telephone", 
+    "ForeignWorker", 
+    "Class"
+)
 
-#define functions. 
-# convert element to integer
-func.df.ToInt <- function(df, colnames) {
-  for (colname in colnames) {
-    df[[colname]] <- as.integer(df[[colname]])
-  }
+# df <- GermanCredit
+
+str(GermanCredit)
+
+summary(GermanCredit)
+
+
+# Step 1
+# Perform latent class analysis of only the categorical
+#  variables for market segmentation using 
+#  (function poLCA in package poLCA). Remember: the local optima 
+#  problem is big for all the clustering and latent class methods. 
+#  The data for analysis should only include the variables 
+#  that you think have business relevance for market segmentation.
+LCA_data <- GermanCredit[, c(1,3, 6, 7, 9, 12, 17)]
+
+
+# convert to factor
+LCA_data$CheckingAccountStatus <- as.factor(LCA_data$CheckingAccountStatus)
+LCA_data$CreditHistory <- as.factor(LCA_data$CreditHistory)
+LCA_data$SavingsAccountBonds <- as.factor(LCA_data$SavingsAccountBonds)
+LCA_data$EmploymentDuration <- as.factor(LCA_data$EmploymentDuration)
+LCA_data$Personal <- as.factor(LCA_data$Personal)
+LCA_data$Property <- as.factor(LCA_data$Property)
+LCA_data$Job <- as.factor(LCA_data$Job)
+
+
+# convert to numeric
+LCA_data$CheckingAccountStatus <- as.numeric(LCA_data$CheckingAccountStatus)
+LCA_data$CreditHistory <- as.numeric(LCA_data$CreditHistory)
+LCA_data$SavingsAccountBonds <- as.numeric(LCA_data$SavingsAccountBonds)
+LCA_data$EmploymentDuration <- as.numeric(LCA_data$EmploymentDuration)
+LCA_data$Personal <- as.numeric(LCA_data$Personal)
+LCA_data$Property <- as.numeric(LCA_data$Property)
+LCA_data$Job <- as.numeric(LCA_data$Job)
+
+
+set.seed(2023)
+
+# Create a function to split sample into train and test using ratio
+split_sample_to_train_and_test <- function(df, portion=0.7) {
   
-  return(df)
+  # For bootstrap samples, simple random sampling is used. 
+  train_indices <- createDataPartition(df$CheckingAccountStatus,
+                                       p = portion,
+                                       list = FALSE,
+                                       times = 1)
+  # create training set
+  df_train <- df[train_indices, ]
+  
+  # create testing set
+  df_test <- df[-train_indices, ]
+  
+  # Return multiple values as list
+  return(list(df_train, df_test))
 }
 
-# convert element to numeric
-func.df.ToNum <- function(df, colnames) {
-  for (colname in colnames) {
-    df[[colname]] <- str_replace_all(df[[colname]], "[^0-9.]", "")
-    df[[colname]] <- suppressWarnings(
-      as.numeric(gsub(",", "", format(df[[colname]], scientific = F)))
-    )
-  }
-  
-  return(df)
-}
+
+# split
+df_split <-  split_sample_to_train_and_test(LCA_data)
+
+# check training data set
+# head(df_split[[1]][])
+train_set <- df_split[[1]][]
+
+# check testing data set
+# head(df_split[[2]][])
+test_set <- df_split[[2]][]
+
+
+# define function and select only the categorical variables
+f<-cbind(
+  CheckingAccountStatus,
+  CreditHistory,
+  SavingsAccountBonds,
+  EmploymentDuration,
+  Personal,
+  Property,
+  Job)~1
+
+
+# created vector with 5 characters
+# bic  = bayesian information criterion
+# abic = adjusted bayesian information criterion
+# aic  = akaike information criterion
+lca_columns= c("model",
+               "log_likelihood",
+               "df",
+               "bic",
+               "abic",
+               "aic",
+               "likelihood_ratio",
+               "r2_entropy"
+               )
+
+# pass this vector length to ncol parameter and nrow with 0
+lca_results = data.frame(matrix(nrow = 0, ncol = length(lca_columns)))
+
+# assign column names
+colnames(lca_results) = lca_columns
+lca_results$model<-as.integer(lca_results$model)
+
 
 # calculate entropy R2 for poLCA model
 # https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3
@@ -69,242 +174,6 @@ entropy.R2 <- function(fit) {
   R2_entropy
 }
 
-# group all "Good" to "1"
-# group all "Bad" to "0"
-GermanCredit_Final <- GermanCredit %>%
-  mutate(Class.Category = case_when(
-    str_detect(Class, "Bad")  ~ "1",
-    str_detect(Class, "Good")  ~ "2"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('Class.Category'))
-
-# group all "CreditHistory.NoCredit.AllPaid" to "1"
-# group all "CreditHistory.ThisBank.AllPaid" to "2"
-# group all "CreditHistory.PaidDuly" to "3"
-# group all "CreditHistory.Delay" to "4"
-# group all "CreditHistory.Critical" to "5"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(CreditHistory = case_when(
-    str_detect(CreditHistory.NoCredit.AllPaid, "1")  ~ "1",
-    str_detect(CreditHistory.ThisBank.AllPaid, "1")  ~ "2",
-    str_detect(CreditHistory.PaidDuly, "1")  ~ "3",
-    str_detect(CreditHistory.Delay, "1")  ~ "4",
-    str_detect(CreditHistory.Critical, "1")  ~ "5"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('CreditHistory'))
-
-# group all "Purpose.NewCar" to "1"
-# group all "Purpose.UsedCar" to "2"
-# group all "Purpose.Furniture.Equipment" to "3"
-# group all "Purpose.Radio.Television" to "4"
-# group all "Purpose.DomesticAppliance" to "5"
-# group all "Purpose.Repairs" to "6"
-# group all "Purpose.Education" to "7"
-# group all "Purpose.Retraining" to "8"
-# group all "Purpose.Business" to "9"
-# group all "Purpose.Other" to "10"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(Purpose.Category = case_when(
-    str_detect(Purpose.NewCar, "1")  ~ "1",
-    str_detect(Purpose.UsedCar, "1")  ~ "2",
-    str_detect(Purpose.Furniture.Equipment, "1")  ~ "3",
-    str_detect(Purpose.Radio.Television, "1")  ~ "4",
-    str_detect(Purpose.DomesticAppliance, "1")  ~ "5",
-    str_detect(Purpose.Repairs, "1")  ~ "6",
-    str_detect(Purpose.Education, "1")  ~ "7",
-    str_detect(Purpose.Retraining, "1")  ~ "8",
-    str_detect(Purpose.Business, "1")  ~ "9",
-    str_detect(Purpose.Other, "1")  ~ "10"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('Purpose.Category'))
-
-# group all "CheckingAccountStatus.none" to "1"
-# group all "CheckingAccountStatus.lt.0" to "2"
-# group all "CheckingAccountStatus.0.to.200" to "3"
-# group all "CheckingAccountStatus.gt.200" to "4"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(CheckingAccountStatus = case_when(
-    str_detect(CheckingAccountStatus.none, "1")  ~ "1",
-    str_detect(CheckingAccountStatus.lt.0, "1")  ~ "2",
-    str_detect(CheckingAccountStatus.0.to.200, "1")  ~ "3",
-    str_detect(CheckingAccountStatus.gt.200, "1")  ~ "4"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('CheckingAccountStatus'))
-
-# group all "EmploymentDuration.Unemployed" to "1"
-# group all "EmploymentDuration.lt.1" to "2"
-# group all "EmploymentDuration.1.to.4" to "3"
-# group all "EmploymentDuration.4.to.7" to "4"
-# group all "EmploymentDuration.gt.7" to "5"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(EmploymentDuration = case_when(
-    str_detect(EmploymentDuration.Unemployed, "1")  ~ "1",
-    str_detect(EmploymentDuration.lt.1, "1")  ~ "2",
-    str_detect(EmploymentDuration.1.to.4, "1")  ~ "3",
-    str_detect(EmploymentDuration.4.to.7, "1")  ~ "4",
-    str_detect(EmploymentDuration.gt.7, "1")  ~ "5"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('EmploymentDuration'))
-
-# group all "SavingsAccountBonds.Unknown" to "1"
-# group all "SavingsAccountBonds.lt.100" to "2"
-# group all "SavingsAccountBonds.100.to.500" to "3"
-# group all "SavingsAccountBonds.500.to.1000" to "4"
-# group all "SavingsAccountBonds.gt.1000" to "5"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(SavingsAccountBonds = case_when(
-    str_detect(SavingsAccountBonds.Unknown, "1")  ~ "1",
-    str_detect(SavingsAccountBonds.lt.100, "1")  ~ "2",
-    str_detect(SavingsAccountBonds.100.to.500, "1")  ~ "3",
-    str_detect(SavingsAccountBonds.500.to.1000, "1")  ~ "4",
-    str_detect(SavingsAccountBonds.gt.1000, "1")  ~ "5"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('SavingsAccountBonds'))
-
-# group all "Personal.Male.Divorced.Seperated" to "1"
-# group all "Personal.Female.NotSingle" to "2"
-# group all "Personal.Male.Single" to "3"
-# group all "Personal.Male.Married.Widowed" to "4"
-# group all "Personal.Female.Single" to "5"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(Personal.Category = case_when(
-    str_detect(Personal.Male.Divorced.Seperated, "1")  ~ "1",
-    str_detect(Personal.Female.NotSingle, "1")  ~ "2",
-    str_detect(Personal.Male.Single, "1")  ~ "3",
-    str_detect(Personal.Male.Married.Widowed, "1")  ~ "4",
-    str_detect(Personal.Female.Single, "1")  ~ "5"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('Personal.Category'))
-
-# group all "Property.RealEstate" to "1"
-# group all "Property.Insurance" to "2"
-# group all "Property.CarOther" to "3"
-# group all "Property.Unknown" to "4"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(Property.Category = case_when(
-    str_detect(Property.RealEstate, "1")  ~ "1",
-    str_detect(Property.Insurance, "1")  ~ "2",
-    str_detect(Property.CarOther, "1")  ~ "3",
-    str_detect(Property.Unknown, "1")  ~ "4"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('Property.Category'))
-
-# group all "Job.UnemployedUnskilled" to "1"
-# group all "Job.UnskilledResident" to "2"
-# group all "Job.SkilledEmployee" to "3"
-# group all "Job.Management.SelfEmp.HighlyQualified" to "4"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(JobSkillLevel = case_when(
-    str_detect(Job.UnemployedUnskilled, "1")  ~ "1",
-    str_detect(Job.UnskilledResident, "1")  ~ "2",
-    str_detect(Job.SkilledEmployee, "1")  ~ "3",
-    str_detect(Job.Management.SelfEmp.HighlyQualified, "1")  ~ "4"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('JobSkillLevel'))
-
-# group all "OtherDebtorsGuarantors.None" to "1"
-# group all "OtherDebtorsGuarantors.CoApplicant" to "2"
-# group all "OtherDebtorsGuarantors.Guarantor" to "3"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(OtherDebtorsGuarantors = case_when(
-    str_detect(OtherDebtorsGuarantors.None, "1")  ~ "1",
-    str_detect(OtherDebtorsGuarantors.CoApplicant, "1")  ~ "2",
-    str_detect(OtherDebtorsGuarantors.Guarantor, "1")  ~ "3"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('OtherDebtorsGuarantors'))
-
-# group all "OtherInstallmentPlans.Bank, "1"" to "1"
-# group all "OtherInstallmentPlans.Stores" to "2"
-# group all "OtherInstallmentPlans.None" to "3"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(OtherInstallmentPlans = case_when(
-    str_detect(OtherInstallmentPlans.Bank, "1")  ~ "1",
-    str_detect(OtherInstallmentPlans.Stores, "1")  ~ "2",
-    str_detect(OtherInstallmentPlans.None, "1")  ~ "3"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('OtherInstallmentPlans'))
-
-# group all "Housing.Rent, "1", "1"" to "1"
-# group all "Housing.Own" to "2"
-# group all "Housing.ForFree" to "3"
-GermanCredit_Final <- GermanCredit_Final %>%
-  mutate(Housing.Category = case_when(
-    str_detect(Housing.Rent, "1")  ~ "1",
-    str_detect(Housing.Own, "1")  ~ "2",
-    str_detect(Housing.ForFree, "1")  ~ "3"
-  ))
-GermanCredit_Final <- func.df.ToNum(GermanCredit_Final,list('Housing.Category'))
-
-# drop columns
-drop_columns <- c("ResidenceDuration","Class","CheckingAccountStatus.none","Telephone", 
-                  "Purpose.Vacation","ForeignWorker","EmploymentDuration.Unemployed",
-                  "EmploymentDuration.lt.1","EmploymentDuration.1.to.4","EmploymentDuration.4.to.7",
-                  "EmploymentDuration.gt.7","SavingsAccountBonds.Unknown","SavingsAccountBonds.lt.100",
-                  "SavingsAccountBonds.100.to.500","SavingsAccountBonds.500.to.1000",
-                  "SavingsAccountBonds.gt.1000","CheckingAccountStatus.none","CheckingAccountStatus.lt.0",
-                  "CheckingAccountStatus.0.to.200","CheckingAccountStatus.gt.200",
-                  "CreditHistory.NoCredit.AllPaid","CreditHistory.ThisBank.AllPaid","CreditHistory.PaidDuly",
-                  "CreditHistory.Delay","CreditHistory.Critical","Purpose.NewCar","Purpose.UsedCar",
-                  "Purpose.Furniture.Equipment","Purpose.Radio.Television","Purpose.DomesticAppliance",
-                  "Purpose.Repairs","Purpose.Education","Purpose.Retraining","Purpose.Business",
-                  "Purpose.Other","Personal.Male.Divorced.Seperated","Personal.Female.NotSingle",
-                  "Personal.Male.Single","Personal.Male.Married.Widowed","Personal.Female.Single",
-                  "Property.RealEstate","Property.Insurance","Property.CarOther","Property.Unknown",
-                  "Job.UnemployedUnskilled","Job.UnskilledResident","Job.SkilledEmployee","Job.Management.SelfEmp.HighlyQualified",
-                  "OtherDebtorsGuarantors.None","OtherDebtorsGuarantors.CoApplicant","OtherDebtorsGuarantors.Guarantor",
-                  "OtherInstallmentPlans.Bank","OtherInstallmentPlans.Stores","OtherInstallmentPlans.None",
-                  "Housing.Rent","Housing.Own","Housing.ForFree")
-GermanCredit_Final <- GermanCredit_Final[,!(names(GermanCredit_Final) %in% drop_columns)]
-
-
-# check for any NA’s in the dataframe
-missmap(GermanCredit_Final,col=c('yellow','black'),y.at=1,y.labels='',legend=TRUE)
-colSums(is.na(GermanCredit_Final))
-
-
-# correlations
-# A positive correlation indicates the extent to which those variables increase or decrease in parallel; 
-# a negative correlation indicates the extent to which one variable increases as the other decreases.
-germanCredit_corr <- round(cor(GermanCredit_Final), 1)
-ggcorrplot(germanCredit_corr, type = "lower", lab = TRUE)
-
-
-# define function and select only the categorical variables
-f<-cbind(Age,Duration,InstallmentRatePercentage,NumberExistingCredits,NumberPeopleMaintenance,Class.Category,
-         CreditHistory,Purpose.Category,CheckingAccountStatus,EmploymentDuration,SavingsAccountBonds,
-         Personal.Category,Property.Category,JobSkillLevel,OtherDebtorsGuarantors,OtherInstallmentPlans,
-         Housing.Category)~1
-
-
-#*******************************Step 2: Perform latent class analysis of only the categorical variables for market segmentation *******************************#
-
-# define the model
-set.seed(20230121)
-
-# created vector with 5 characters
-# bic  = bayesian information criterion
-# abic = adjusted bayesian information criterion
-# aic  = akaike information criterion
-lca_columns= c("model","log_likelihood","df","bic","abic","aic","likelihood_ratio","r2_entropy")
-
-# pass this vector length to ncol parameter and nrow with 0
-lca_results = data.frame(matrix(nrow = 0, ncol = length(lca_columns)))
-
-# assign column names
-colnames(lca_results) = lca_columns
-lca_results$model<-as.integer(lca_results$model)
-
-
-# split the data to train and test.
-for(i in 1:1000){
-  sample <- sample(c(TRUE,FALSE), 
-                   nrow(GermanCredit_Final), 
-                   replace=TRUE, 
-                   prob=c(0.7,0.3))
-  train <- GermanCredit_Final[sample, ]
-  test <- GermanCredit_Final[!sample, ]
-}
-
 
 # run a sequence of models with two to ten groups
 # with nrep=10 it runs every model 10 times and keeps the model with the lowest BIC
@@ -315,13 +184,13 @@ for(i in 1:1000){
 lca_row_number <- 1
 for(i in 2:6){
   lca_result <- poLCA(formula = f, 
-                      data = train, 
+                      data = train_set, 
                       nclass=i, maxiter=100, 
                       na.rm=FALSE,  
-              nrep=10, 
-              verbose=TRUE, 
-              calc.se=TRUE,
-              graphs = FALSE)
+                      nrep=10, 
+                      verbose=TRUE, 
+                      calc.se=TRUE,
+                      graphs = FALSE)
   
   #-ve df are not acceptable model so we exit the loop
   if(lca_result$resid.df < 0){
@@ -332,7 +201,8 @@ for(i in 2:6){
   lca_results[lca_row_number,2] <- lca_result$llik
   lca_results[lca_row_number,3] <- lca_result$resid.df
   lca_results[lca_row_number,4] <- lca_result$bic
-  lca_results[lca_row_number,5] <- (-2*lca_result$llik) + ((log((lca_result$N + 2)/24)) * lca_result$npar)
+  lca_results[lca_row_number,5] <- (-2*lca_result$llik) + 
+    ((log((lca_result$N + 2)/24)) * lca_result$npar)
   lca_results[lca_row_number,6] <- lca_result$aic
   lca_results[lca_row_number,7] <- lca_result$Gsq
   
@@ -342,35 +212,57 @@ for(i in 2:6){
   lca_row_number = lca_row_number + 1
 }
 
-
-# temp_lca_result <- poLCA(formula = f, data = GermanCredit_Final, nclass=2, maxiter=100, na.rm=FALSE,  
-#                     nrep=10, verbose=TRUE, calc.se=TRUE, graphs = FALSE)
-
+# convert model to numeric
 model <- as.factor(lca_results$model)
 lca_results$model <- as.numeric(model)
 
-# We believe the K=2 is the elbow.
-# 
-plot(x=lca_results$model,
-     y=lca_results$aic, 
-     type = "b", 
-     xlab="Principal Component", 
-     ylab = "AIC")
+# plot the AIC 
+lca_results %>%
+  ggplot(aes(x=model,y=aic, group=1))+
+  geom_point(size=4)+
+  geom_line()+
+  labs(title="Scree plot: AIC on model")+
+  xlab("Model")+
+  ylab("AIC")
 
-plot(x=lca_results$model, 
-     y=lca_results$abic, 
-     type = "b", 
-     xlab="Principal Component", 
-     ylab = "ABIC"
-     )
 
+# plot ABIC
+lca_results %>%
+  ggplot(aes(x=model,y=abic, group=1))+
+  geom_point(size=4)+
+  geom_line()+
+  labs(title="Scree plot: Adjust BIC on model")+
+  xlab("Model")+
+  ylab("ABIC")
+
+
+# plot BIC
+lca_results %>%
+  ggplot(aes(x=model,y=bic, group=1))+
+  geom_point(size=4)+
+  geom_line()+
+  labs(title="Scree plot: bic on model")+
+  xlab("Model")+
+  ylab("BIC")
+
+# AIC showing 2 
+# BIC showing 2
+# ABIC showing 2
 # The cluster is 2.
 
+# STEP 3
+# Perform Test validation of LCA using your chosen K. 
+# For Test, use the centers class-conditional probabilities 
+# - probs - from training set as input to probs.start for test 
+# (generated from the training set LCA solution, as the starting 
+# point for the test. Use similarity of relative class sizes and 
+# test class conditional probabilities as measures of stability.
+# 
 
-#*******************************Step 3: Perform Test validation of LCA *******************************#
-
+# Rerun your LCA model with the training set and your chosen K. 
+# Save the conditional probability
 lca_result_k2 <- poLCA(formula = f, 
-                    data = GermanCredit_Final, 
+                    data = train_set, 
                     nclass=2, maxiter=100, 
                     na.rm=FALSE,  
                     nrep=10, 
@@ -378,5 +270,28 @@ lca_result_k2 <- poLCA(formula = f,
                     calc.se=TRUE,
                     graphs = FALSE)
 
-# conditional probability
-condition_prob <- lca_result_k2$probs
+cond_prob <- lca_result_k2$probs
+
+# Build a new LCA model with the test set, your chosen K, 
+# and the probability you just saved as the initial probability. 
+# For example, the test model should be "poLCA(f, German.Test.Data, ..., 
+# prob.start = LCA.train.object$probs....)
+lca_result_test <- poLCA(
+  formula=f, 
+  data=test_set,
+  nclass = 2, 
+  maxiter = 1000,
+  graphs = FALSE, 
+  tol = 1e-10, 
+  na.rm = FALSE,
+  probs.start = lca_result_k2$probs, 
+  nrep = 10, 
+  verbose = TRUE, 
+  calc.se = TRUE
+)
+
+
+# Print class sizes and conditional probabilities of the train model 
+# and the test model. How similar are they? Would you consider the
+#  model stable?
+lca_result_test
