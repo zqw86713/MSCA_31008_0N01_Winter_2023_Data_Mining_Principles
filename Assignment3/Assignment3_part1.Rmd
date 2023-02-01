@@ -1,12 +1,23 @@
-# ---
-# title: "MSCA 31008 Statistical Analysis - Assignment 2 Part 1"
-# authors: "Prinu Mathew, Qingwei Zhang, Jake Brewer"
-# start_date: "01/19/2023"
-# last_revision_date: "02/05/2023"
-# ---
+---
+title: "Assignment3_part1"
+author: "Prinu Mathew, Qingwei Zhang, Jake Brewer"
+date: "2023-02-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 3 Part 1
 
 
-# install the package
+Perform latent class analysis of only the categorical variables for market segmentation using (function poLCA in package poLCA). Remember: the local optima problem is big for all the clustering and latent class methods. The data for analysis should only include the variables that you think have business relevance for market segmentation.
+
+
+## Install packages.
+
+```
 install.packages("ggplot2")
 install.packages("ggcorrplot")
 install.packages("caret")
@@ -15,8 +26,10 @@ install.packages("dplyr")
 install.packages("Amelia")
 install.packages("stringr")
 install.packages("GGally")
+```
 
-# load the package
+## load the package
+```{r, warning = FALSE, echo=FALSE}
 library(ggplot2)
 library(caret)
 library(poLCA)
@@ -25,9 +38,11 @@ library(Amelia)
 library(ggcorrplot)
 library(stringr)
 library(GGally)
+```
 
 
-# Step 0.	Use csv data.
+## Step 0.	Use csv data.
+```{r, warning = FALSE}
 GermanCredit <- read.table(
   "http://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data",
   stringsAsFactors = TRUE
@@ -57,20 +72,17 @@ colnames(GermanCredit) <- c(
     "Class"
 )
 
-# df <- GermanCredit
+```
 
-str(GermanCredit)
+## Step 1
+Perform latent class analysis of only the categorical
+variables for market segmentation using
+(function poLCA in package poLCA). Remember: the local optima
+problem is big for all the clustering and latent class methods.
+The data for analysis should only include the variables
+that you think have business relevance for market segmentation.
 
-summary(GermanCredit)
-
-
-# Step 1
-# Perform latent class analysis of only the categorical
-#  variables for market segmentation using 
-#  (function poLCA in package poLCA). Remember: the local optima 
-#  problem is big for all the clustering and latent class methods. 
-#  The data for analysis should only include the variables 
-#  that you think have business relevance for market segmentation.
+```{r}
 LCA_data <- GermanCredit[, c(1,3, 6, 7, 9, 12, 17)]
 
 
@@ -92,20 +104,23 @@ LCA_data$EmploymentDuration <- as.numeric(LCA_data$EmploymentDuration)
 LCA_data$Personal <- as.numeric(LCA_data$Personal)
 LCA_data$Property <- as.numeric(LCA_data$Property)
 LCA_data$Job <- as.numeric(LCA_data$Job)
+```
 
+## correlations
+A positive correlation indicates the extent to which those variables increase or decrease in parallel; 
+a negative correlation indicates the extent to which one variable increases as the other decreases.
 
-
-
-# correlations
-# A positive correlation indicates the extent to which those variables increase or decrease in parallel; 
-# a negative correlation indicates the extent to which one variable increases as the other decreases.
+```{r}
 germanCredit_corr <- round(cor(LCA_data), 1)
 ggcorrplot(germanCredit_corr, type = "lower", lab = TRUE)
+```
 
 
+## Create a function to split sample into train and test using ratio
+
+```{r}
 set.seed(2023)
 
-# Create a function to split sample into train and test using ratio
 split_sample_to_train_and_test <- function(df, portion=0.7) {
   
   # For bootstrap samples, simple random sampling is used. 
@@ -134,8 +149,15 @@ train_set <- df_split[[1]][]
 # check testing data set
 # head(df_split[[2]][])
 test_set <- df_split[[2]][]
+```
 
 
+## Step2
+
+Determine 2, 3,..,K class/cluster solutions. Remember to run from multiple random starts. Use AIC criterion and interpretation based on graphs to interpret LCA solutions
+
+
+```{r}
 # define function and select only the categorical variables
 f<-cbind(
   CheckingAccountStatus,
@@ -167,10 +189,13 @@ lca_results = data.frame(matrix(nrow = 0, ncol = length(lca_columns)))
 # assign column names
 colnames(lca_results) = lca_columns
 lca_results$model<-as.integer(lca_results$model)
+```
 
 
-# calculate entropy R2 for poLCA model
+## calculate entropy R2 for poLCA model
 # https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3
+
+```{r}
 machine_tolerance <- sqrt(.Machine$double.eps)
 entropy.R2 <- function(fit) {
   entropy <- function(p) {
@@ -182,14 +207,12 @@ entropy.R2 <- function(fit) {
   R2_entropy <- (error_prior - error_post) / error_prior
   R2_entropy
 }
+```
 
 
-# run a sequence of models with two to ten groups
-# with nrep=10 it runs every model 10 times and keeps the model with the lowest BIC
-# we used the maxiter argument, which indicates the number of random starting points to be used in the estimation.
-# by setting it to 100, the function will run 100 times with different starting points, and it will choose the best 
-# solution based on the log-likelihood.
-# set.seed(1)
+## run a sequence of models with two to ten groups
+with nrep=10 it runs every model 10 times and keeps the model with the lowest BIC we used the maxiter argument, which indicates the number of random starting points to be used in the estimation. By setting it to 100, the function will run 100 times with different starting points, and it will choose the best solution based on the log-likelihood.
+```{r}
 lca_row_number <- 1
 for(i in 2:6){
   lca_result <- poLCA(formula = f, 
@@ -220,8 +243,12 @@ for(i in 2:6){
   
   lca_row_number = lca_row_number + 1
 }
+```
 
-# convert model to numeric
+
+## convert model to numeric
+
+```{r}
 model <- as.factor(lca_results$model)
 lca_results$model <- as.numeric(model)
 
@@ -254,19 +281,23 @@ lca_results %>%
   xlab("Model")+
   ylab("BIC")
 
-# AIC showing 2 
-# BIC showing 2
-# ABIC showing 2
-# The cluster is 2.
+```
+
+
+AIC scree plot appears to show the elbow at k=2,
+BIC scree plot appears to show the elbow at k=2,
+ABIC scree plot appears to show the elbow at k=2.
+
 
 # STEP 3
-# Perform Test validation of LCA using your chosen K. 
-# For Test, use the centers class-conditional probabilities 
-# - probs - from training set as input to probs.start for test 
-# (generated from the training set LCA solution, as the starting 
-# point for the test. Use similarity of relative class sizes and 
-# test class conditional probabilities as measures of stability.
-# 
+Perform Test validation of LCA using your chosen K. 
+For Test, use the centers class-conditional probabilities 
+- probs - from training set as input to probs.start for test 
+(generated from the training set LCA solution, as the starting 
+point for the test. Use similarity of relative class sizes and 
+test class conditional probabilities as measures of stability.
+
+```{r}
 
 # Rerun your LCA model with the training set and your chosen K. 
 # Save the conditional probability
@@ -298,12 +329,14 @@ lca_result_test <- poLCA(
   verbose = TRUE, 
   calc.se = TRUE
 )
+```
 
 
-# Print class sizes and conditional probabilities of the train model 
-# and the test model. How similar are they? Would you consider the
-#  model stable?
+Print class sizes and conditional probabilities of the train model 
+and the test model. How similar are they? Would you consider the
+model stable?
 
+```{r}
 # test model class size
 lca_result_test$P
 
@@ -320,6 +353,20 @@ lca_result_train$probs
 # plot the two models
 plot(lca_result_train)
 plot(lca_result_test)
+```
 
+# Step 4. 
 
+```
+We named the class 1 as “More Financially Secure” and the class 2 as “Less Financially Secure.”
+```
 
+# Step 5. 
+
+```
+1.      Naming the classes was difficult because the two classes did not fit easily into boxes. Class one was more financially secure based on their credit history, property ownership, and checking account status. 
+
+2.      Class two was less financially secure based on the same factors. However, Class 2 had longer employment history, and were more likely to be in the management or self-employed job categories, which made it difficult to say that they were substantially worse off. 
+
+3.      For that reason, we decided that it was best to say that they were less financially secure because they did have the same assets as Class 1, but it is possible that they were not necessarily less wealthy.
+```
