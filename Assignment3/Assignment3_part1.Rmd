@@ -29,7 +29,7 @@ install.packages("GGally")
 ```
 
 ## load the package
-```{r, warning = FALSE, echo=FALSE}
+```{r}
 library(ggplot2)
 library(caret)
 library(poLCA)
@@ -193,9 +193,10 @@ lca_results$model<-as.integer(lca_results$model)
 
 
 ## calculate entropy R2 for poLCA model
-# https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3
+
 
 ```{r}
+# https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3
 machine_tolerance <- sqrt(.Machine$double.eps)
 entropy.R2 <- function(fit) {
   entropy <- function(p) {

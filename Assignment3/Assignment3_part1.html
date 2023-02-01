@@ -378,9 +378,19 @@ install.packages(&quot;GGally&quot;)</code></pre>
 </div>
 <div id="load-the-package" class="section level2">
 <h2>load the package</h2>
+<pre class="r"><code>library(ggplot2)</code></pre>
+<pre><code>## Warning: package &#39;ggplot2&#39; was built under R version 4.2.2</code></pre>
+<pre class="r"><code>library(caret)</code></pre>
+<pre><code>## Warning: package &#39;caret&#39; was built under R version 4.2.2</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
+<pre><code>## Warning: package &#39;lattice&#39; was built under R version 4.2.2</code></pre>
+<pre class="r"><code>library(poLCA)</code></pre>
+<pre><code>## Warning: package &#39;poLCA&#39; was built under R version 4.2.2</code></pre>
 <pre><code>## Loading required package: scatterplot3d</code></pre>
 <pre><code>## Loading required package: MASS</code></pre>
+<pre><code>## Warning: package &#39;MASS&#39; was built under R version 4.2.2</code></pre>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 4.2.2</code></pre>
 <pre><code>## 
 ## Attaching package: &#39;dplyr&#39;</code></pre>
 <pre><code>## The following object is masked from &#39;package:MASS&#39;:
@@ -392,6 +402,8 @@ install.packages(&quot;GGally&quot;)</code></pre>
 <pre><code>## The following objects are masked from &#39;package:base&#39;:
 ## 
 ##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(Amelia)</code></pre>
+<pre><code>## Warning: package &#39;Amelia&#39; was built under R version 4.2.2</code></pre>
 <pre><code>## Loading required package: Rcpp</code></pre>
 <pre><code>## ## 
 ## ## Amelia II: Multiple Imputation
@@ -399,6 +411,12 @@ install.packages(&quot;GGally&quot;)</code></pre>
 ## ## Copyright (C) 2005-2023 James Honaker, Gary King and Matthew Blackwell
 ## ## Refer to http://gking.harvard.edu/amelia/ for more information
 ## ##</code></pre>
+<pre class="r"><code>library(ggcorrplot)</code></pre>
+<pre><code>## Warning: package &#39;ggcorrplot&#39; was built under R version 4.2.2</code></pre>
+<pre class="r"><code>library(stringr)</code></pre>
+<pre><code>## Warning: package &#39;stringr&#39; was built under R version 4.2.2</code></pre>
+<pre class="r"><code>library(GGally)</code></pre>
+<pre><code>## Warning: package &#39;GGally&#39; was built under R version 4.2.2</code></pre>
 <pre><code>## Registered S3 method overwritten by &#39;GGally&#39;:
 ##   method from   
 ##   +.gg   ggplot2</code></pre>
@@ -545,10 +563,8 @@ lca_results$model&lt;-as.integer(lca_results$model)</code></pre>
 </div>
 <div id="calculate-entropy-r2-for-polca-model" class="section level2">
 <h2>calculate entropy R2 for poLCA model</h2>
-</div>
-<div id="httpsgist.github.comdaobc2b6d83815ddd57cde3cebfdc2c267b3" class="section level1">
-<h1><a href="https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3" class="uri">https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3</a></h1>
-<pre class="r"><code>machine_tolerance &lt;- sqrt(.Machine$double.eps)
+<pre class="r"><code># https://gist.github.com/daob/c2b6d83815ddd57cde3cebfdc2c267b3
+machine_tolerance &lt;- sqrt(.Machine$double.eps)
 entropy.R2 &lt;- function(fit) {
   entropy &lt;- function(p) {
     p &lt;- p[p &gt; machine_tolerance] # since Lim_{p-&gt;0} p log(p) = 0
@@ -559,6 +575,7 @@ entropy.R2 &lt;- function(fit) {
   R2_entropy &lt;- (error_prior - error_post) / error_prior
   R2_entropy
 }</code></pre>
+</div>
 <div id="run-a-sequence-of-models-with-two-to-ten-groups" class="section level2">
 <h2>run a sequence of models with two to ten groups</h2>
 <p>with nrep=10 it runs every model 10 times and keeps the model with
@@ -1047,7 +1064,6 @@ lca_results %&gt;%
 <p>AIC scree plot appears to show the elbow at k=2, BIC scree plot
 appears to show the elbow at k=2, ABIC scree plot appears to show the
 elbow at k=2.</p>
-</div>
 </div>
 <div id="step-3" class="section level1">
 <h1>STEP 3</h1>
