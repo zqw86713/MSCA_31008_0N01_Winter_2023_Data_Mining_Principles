@@ -1,0 +1,44 @@
+encounter_id,hash encrypted Hospitalization ID -  Unique ID 
+patient_nbr,"hash encrypted patient  ID, note that a patient may appear in the data more than once "
+race,the race of the patient
+gender,the gender of the patient
+age,the age of the patient at the time that they were admitted to hospital
+admission_type_id ,elective / emergency etc.
+discharge_disposition_id ,the status of the patient at the end of their hospitalisation
+admission_source_id,the hospital operational section through the patient was admitted
+time_in_hospital ,how long the patient was in hospital during this hospitalisation
+num_lab_procedures ,number of lab procedures / tests performed during this hospitalisation
+num_procedures,number of medical procedures performed during this hospitalisation
+num_medications ,number of different medications administered to the patient
+number_outpatient ,number of times the patient has previously been admitted as an outpatient in the previous 12 months
+number_emergency ,number of times the patient has previously been admitted as an emergency patient in the previous 12 months
+number_inpatient,number of times the patient has previously been admitted as an inpatient in the previous 12 months
+diag_1 ,standard ICD9 diagnosis code for the most important diagnosis https://en.wikipedia.org/wiki/List_of_ICD-9_codes
+diag_2,standard ICD9 diagnosis code for the 2nd most important diagnosis - note: may be blank if only 1 diagnosis
+diag_3 ,standard ICD9 diagnosis code for the 3rd most important diagnosis - note: may be blank if only 1 or 2 diagnoses
+number_diagnoses ,"total number of diagnoses for this patient, including past diagnoses"
+max_glu_serum,results of glucose tolerance test
+A1Cresult ,measures what percentage of your hemoglobin — a protein in red blood cells that carries oxygen — is coated with sugar (glycated)
+metformin ,drug used to treat type 2 diabetes
+repaglinide,an antidiabetic drug in the class of medications known as meglitinides
+nateglinide ,an oral drug used to lower blood sugar (glucose) levels in type 2 diabetes. It is in a class of drugs called meglitinides
+chlorpropamide ,an oral diabetes medicine that helps control blood sugar levels. This medication helps your pancreas produce insulin
+glimepiride ,medium- to long-acting sulfonylurea antidiabetic drug
+acetohexamide ,"a first-generation sulfonylurea medication used to treat diabetes mellitus type 2, particularly in people whose diabetes cannot be controlled by diet alone"
+glipizide ,an oral diabetes medicine that helps control blood sugar levels by helping your pancreas produce insulin
+glyburide ,an oral diabetes medicine that helps control blood sugar levels in a class of medications known as sulfonylureas
+tolbutamide ,"a first-generation potassium channel blocker, sulfonylurea oral hypoglycemic drug"
+pioglitazone ,"a prescription drug of the thiazolidinedione (TZD) class with hypoglycemic (antihyperglycemic, antidiabetic) action to treat diabetes"
+rosiglitazone,an antidiabetic drug in the thiazolidinedione class of drugs. It works as an insulin sensitizer
+acarbose ,"slows the digestion of carbohydrates in the body, which helps control blood sugar levels"
+miglitol ,an oral anti-diabetic drug that acts by inhibiting the ability of the patient to break down complex carbohydrates into glucose
+troglitazone ,"an antidiabetic and anti-inflammatory drug, and a member of the drug class of the thiazolidinediones"
+tolazamide ,an oral blood glucose lowering drug used for people with Type 2 diabetes. It is part of the sulfonylurea family
+insulin,Insulin is a hormone that is important for metabolism and utilization of energy from the ingested nutrients - especially glucose.
+glyburide-metformin,using both Glyburide and metformin
+glipizide-metformin ,using both glipizide and metformin
+glimepiride.pioglitazone,using both glimepiride and pioglitazone
+metformin.pioglitazone ,using both metformin and pioglitazone
+change ,change in patient treatment administered
+diabetesMed ,whether any diabetes medications are administered
+readmitted ,whether the patient was subsequently readmitted to hospital for > 30 days or  < 30 days of being discharged or never readmitted. 
