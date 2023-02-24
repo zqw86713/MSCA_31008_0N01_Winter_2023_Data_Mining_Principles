@@ -149,3 +149,88 @@ plot(c(1,2,3),c(clustreg.train.1$rsq.best,
      main="VAF Plot for Train Data: Cluster-wise Regression",
      ylab="Variance Accounted For",
      xlab="Number of Clusters")
+
+
+# Perform Test validation testing of the cluster-wise regressions
+#  using function clustreg.predict().
+validation_test_1 <- clustreg.predict(clustreg.train.1, test_set)
+
+validation_test_2 <- clustreg.predict(clustreg.train.2, test_set)
+
+validation_test_3 <- clustreg.predict(clustreg.train.3, test_set)
+
+
+# Choose the model with the best regression interpretation on 
+# Training Data, R^2 and related significance, and the best 
+# test performance.
+# Show a table of training R^2, holdout R^2, and percentage 
+# decrease from train to holdout R squared:
+#  (Train R square – Holdout R square)/ Train R square.
+# Which model is the most stable? Which performs the best 
+# on the holdout set. Which one would you choose as the final model?
+# 
+validation_test_1$rsq
+validation_test_2$rsq
+validation_test_3$rsq
+
+
+# Create a table from existing data.
+tab <- table(df$row_variable, df$column_variable)
+
+tab <- matrix(nrow=3, ncol=3)
+colnames(tab) <- c('Train_R2','HoldOut_R2','Pct_Decr')
+rownames(tab) <- c('K1','K2','K3')
+
+tab[1,1] <- clustreg.train.1$rsq.best
+tab[2,1] <- clustreg.train.2$rsq.best
+tab[3,1] <- clustreg.train.3$rsq.best
+
+tab[1,2] <- validation_test_1$rsq
+tab[2,2] <- validation_test_2$rsq
+tab[3,2] <- validation_test_3$rsq
+
+tab[1,3] <- (clustreg.train.1$rsq.best - validation_test_1$rsq)/clustreg.train.1$rsq.best
+tab[2,3] <- (clustreg.train.2$rsq.best - validation_test_2$rsq)/clustreg.train.2$rsq.best
+tab[3,3] <- (clustreg.train.3$rsq.best - validation_test_3$rsq)/clustreg.train.3$rsq.best
+
+tab
+#     Train_R2 HoldOut_R2    Pct_Decr
+# K1 0.4707535  0.9915567 -1.10631835
+# K2 0.8081420  0.9786149 -0.21094413
+# K3 0.8764858  0.8011402  0.08596331
+
+#The combination for K2 seems to be the best because it has 
+#a high Train R2 and Test R2 value, whereas K1 has a very low Train R2
+#and K3 has a significantly lower Test R2
+#
+#Answer: K2 seems to be the most stable. 
+#K1 had the best test result, but a very low Train R2
+#I would choose K2 as the final model.
+
+
+
+# Summarize your results –for both training and Test
+# From the training plot of R squared, which solution 
+# seems best? How did each solution perform in holdout? 
+# Are you able to interpret the results by reading 
+# the regression coefficients? Can you tell what types of clusters
+#  have been formed?
+
+# K2 is the best in the training plot. K1 did best in the holdout  R squared,
+# K2 is the second and K3 perform significantly worse. 
+validation_test_1$results
+validation_test_2$results
+validation_test_3$results
+
+# The regression coefficients for the final model that we chose, K2, account for ~80%
+# of the variance.
+# 
+# The significant coefficients in regression 1 were
+# Duration, InstallmentRatePercentage, ResidenceDuration, Age, and Number Existing Credits
+# Accounting for ~70% of the variance
+# 
+# The significant coefficients in regression 2 were
+# Duration, InstallmentRatePercentage, and ResidenceDuration
+# Accounting for ~70% of the variance
+# 
+
