@@ -1,0 +1,289 @@
+---
+title: "Assignment5_part1"
+author:  "Prinu Mathew, Qingwei Zhang, Jake Brewer"
+date: "2023-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Assignment 5 Part 1
+
+
+Use the GermanCredit data (package caret) in R
+Cluster-wise regression
+
+
+
+## Install packages.
+
+```
+install.packages("caret")
+install.packages("tidyselect")
+install.packages("ggplot2")
+
+```
+
+
+## load the package
+```{r}
+
+library(tidyselect)
+library(caret)
+library(ggplot2)
+```
+
+
+
+## 1.	Use csv or caret data.
+
+```{r}
+data(GermanCredit)
+
+df <- GermanCredit
+
+```
+
+
+
+
+# 2. Use the training and Test samples for the GermanCredit data set 
+# that you used in Assignment 1. Call them, say, Train and Test.
+
+```{r}
+set.seed(3456)
+
+
+# Create a function to split sample into train and test using 632:328 ratio
+# # Use the same seed from the previous assignment for train-test split
+
+split_sample_to_train_and_test <- function(df, portion = 0.632 ) {
+    
+    train_indices <- createDataPartition(df$Amount,
+                                         p = portion,
+                                         list = FALSE,
+                                         times = 1)
+    # create training set
+    df_train <- df[train_indices, ]
+    
+    # create testing set
+    df_test <- df[-train_indices, ]
+    
+    # view number of rows in each set
+    # nrow(df_train)
+    # nrow(df_test)
+    
+    # Return multiple values as list
+    return(list(df_train, df_test))
+}
+
+
+df_split <- split_sample_to_train_and_test(df)
+
+# check training data set
+# head(df_split[[1]][])
+train_set <- df_split[[1]][]
+
+# check testing data set
+# head(df_split[[2]][])
+test_set <- df_split[[2]][]
+
+
+```
+
+
+
+## Load Professor’s `clustreg` and `clustreg.predict` functions
+
+```{r}
+clustreg=function(dat,k,tries,sed,niter)
+{
+    
+    set.seed(sed)
+    dat=as.data.frame(dat)
+    rsq=rep(NA,niter)
+    res=list()
+    rsq.best=0
+    for(l in 1:tries) 
+    {
+        
+        c = sample(1:k,nrow(dat),replace=TRUE)
+        yhat=rep(NA,nrow(dat))
+        for(i in 1:niter) 
+        {		
+            resid=pred=matrix(0,nrow(dat),k)
+            for(j in 1:k)
+            {	
+                pred[,j]=predict(glm(dat[c==j,],family="gaussian"),newdata=dat)		
+                resid[,j] = (pred[,j]-dat[,1])^2
+            }
+            
+            c = apply(resid,1,which.min)
+            for(m in 1:nrow(dat)) {yhat[m]=pred[m,c[m]]}
+            rsq[i] = cor(dat[,1],yhat)^2	
+        }
+        
+        if(rsq[niter] > rsq.best) 
+        {	
+            rsq.best=rsq[niter]
+            l.best=l
+            c.best=c
+            yhat.best=yhat
+        }
+    }
+    
+    res=list("Complete")
+    for(i in k:1) {res=list(summary(lm(dat[c.best==i,])),res)}
+    
+    return(list(data=dat,nclust=k,tries=tries,seed=sed,rsq.best=rsq.best,number.loops=niter, Best.try=l.best,cluster=c.best,results=res))
+}
+
+
+clustreg.predict=function(results,newdat){
+    
+    yhat=rep(NA,nrow(newdat))
+    resid=pred=matrix(0,nrow(newdat),length(table(results$cluster)))
+    
+    for(j in 1:length(table(results$cluster))){			
+        pred[,j]=predict(glm(results$data[results$cluster==j,],family="gaussian"),newdata=newdat)		
+        resid[,j] = (pred[,j]-newdat[,1])^2
+    }
+    
+    c = apply(resid,1,which.min)
+    for(m in 1:nrow(newdat)) {yhat[m]=pred[m,c[m]]}
+    rsq = cor(newdat[,1],yhat)^2	
+    
+    return(list(results=results,newdata=newdat,cluster=c,yhat=yhat,rsq=rsq))
+    
+}
+
+```
+
+
+```{r}
+## Standardize your variables
+standaridized_variables = as.data.frame(scale(train_set[,-10]))
+```
+
+## Use the Train data set to build a cluster-wise regression model. 
+Choose "Amount" as the dependent variable. Build 1, 2, and 3 cluster
+solutions. 4 clusters may be too many for this data set.
+
+```{r}
+train_stand <- standaridized_variables[c(2,1,3,4,5,6,7)]
+
+
+# Perform cluster-wise regression for 1, 2, and 3 clusters. 
+# Arguments for clustreg formula are: dat, k, tries, seed, niter
+clustreg.train.1=clustreg(train_stand,1,1,3456,10)
+clustreg.train.2=clustreg(train_stand,2,2,3456,10)
+clustreg.train.3=clustreg(train_stand,3,2,3456,10)
+```
+
+## Plot R2 as a function of the number of clusters
+
+```{r}
+# Plot R^2 as a function of the number of clusters
+plot(c(1,2,3),c(clustreg.train.1$rsq.best,
+                clustreg.train.2$rsq.best,
+                clustreg.train.3$rsq.best),
+     ylim=c(0,1),
+     type="l",
+     col=4,
+     main="VAF Plot for Train Data: Cluster-wise Regression",
+     ylab="Variance Accounted For",
+     xlab="Number of Clusters")
+```
+## 3. Perform Test validation testing of the cluster-wise regressions using function
+clustreg.predict() that I have uploaded in R
+```{r}
+# Perform Test validation testing of the cluster-wise regressions
+#  using function clustreg.predict().
+validation_test_1 <- clustreg.predict(clustreg.train.1, test_set)
+
+validation_test_2 <- clustreg.predict(clustreg.train.2, test_set)
+
+validation_test_3 <- clustreg.predict(clustreg.train.3, test_set)
+```
+
+
+## 4. Choose the model with the best regression interpretation on 
+Training Data, R^2 and related significance, and the best 
+test performance.
+
+Show a table of training R^2, holdout R^2, and percentage 
+decrease from train to holdout R squared:
+ (Train R square – Holdout R square)/ Train R square.
+Which model is the most stable? Which performs the best 
+on the holdout set. Which one would you choose as the final model?
+```{r}
+validation_test_1$rsq
+validation_test_2$rsq
+validation_test_3$rsq
+
+# Create a table from existing data.
+tab <- table(df$row_variable, df$column_variable)
+
+tab <- matrix(nrow=3, ncol=3)
+colnames(tab) <- c('Train_R2','HoldOut_R2','Percentage_decrease')
+rownames(tab) <- c('K1','K2','K3')
+
+tab[1,1] <- clustreg.train.1$rsq.best
+tab[2,1] <- clustreg.train.2$rsq.best
+tab[3,1] <- clustreg.train.3$rsq.best
+
+tab[1,2] <- validation_test_1$rsq
+tab[2,2] <- validation_test_2$rsq
+tab[3,2] <- validation_test_3$rsq
+
+tab[1,3] <- (clustreg.train.1$rsq.best - validation_test_1$rsq)/clustreg.train.1$rsq.best
+tab[2,3] <- (clustreg.train.2$rsq.best - validation_test_2$rsq)/clustreg.train.2$rsq.best
+tab[3,3] <- (clustreg.train.3$rsq.best - validation_test_3$rsq)/clustreg.train.3$rsq.best
+
+tab
+```
+
+
+The combination for K2 seems to be the best because it has 
+a high Train R2 and Test R2 value, whereas K1 has a very low Train R2
+and K3 has a significantly lower Test R2
+
+K2 seems to be the most stable. 
+K1 had the best test result, but a very low Train R2
+I would choose K2 as the final model.
+
+
+
+## Summarize your results –for both training and Test
+From the training plot of R squared, which solution 
+seems best? How did each solution perform in holdout? 
+Are you able to interpret the results by reading 
+the regression coefficients? Can you tell what types of clusters
+have been formed?
+
+
+K3 is the best in the training plot. K1 did best in the
+holdout  R squared, follow by K2 and K3.
+
+The regression coefficients for the final model that we chose, K2, account for ~80%
+of the variance in the training data.
+
+The significant coefficients in regression 1 were
+Duration, InstallmentRatePercentage, ResidenceDuration, Age, and Number Existing Credits
+Accounting for ~70% of the variance
+
+The significant coefficients in regression 2 were
+Duration, InstallmentRatePercentage, and ResidenceDuration
+Accounting for ~70% of the variance
+
+
+```{r, results='hide'}
+validation_test_1$results
+validation_test_2$results
+validation_test_3$results
+```
+
+
